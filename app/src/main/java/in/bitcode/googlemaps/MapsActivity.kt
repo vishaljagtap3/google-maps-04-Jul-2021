@@ -3,19 +3,19 @@ package `in`.bitcode.googlemaps
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
 import `in`.bitcode.googlemaps.databinding.ActivityMapsBinding
 import android.annotation.SuppressLint
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.os.Build
+import android.util.Log
+import android.view.View
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.annotation.RequiresApi
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.*
+import com.google.android.gms.maps.GoogleMap.CancelableCallback
+import com.google.android.gms.maps.model.*
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -23,13 +23,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     lateinit var bitMarker: Marker
     lateinit var mumMarker: Marker
+    var markers = ArrayList<Marker>()
+    lateinit var circle : Circle
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-
         setContentView(R.layout.activity_maps)
-
 
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
@@ -44,7 +44,136 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         setupUI();
         addMarkers();
 
+        map.setOnMapClickListener(MyOnMapClickListener())
+        map.setOnMarkerClickListener(MyOnMarkerClickListener())
+        map.setOnMarkerDragListener(MyOnMarkerDragListener())
+        map.setOnInfoWindowClickListener(MyOnInfoWindowClickListener())
+
+        map.setInfoWindowAdapter(MyInfoWindowAdapter())
+
+        map.setOnCircleClickListener(MyOnCircleClickListener())
+        addShapes()
     }
+
+
+    private inner class MyOnCircleClickListener : GoogleMap.OnCircleClickListener {
+        override fun onCircleClick(circle: Circle) {
+            mt("Circle clicked!");
+        }
+    }
+
+    private fun addShapes() {
+
+        circle = map.addCircle(
+            CircleOptions()
+                .center(bitMarker.position)
+                .clickable(true)
+                .radius(5000.0)
+                .fillColor(
+                    Color.argb(90, 255, 0, 0)
+                )
+                .strokeColor(Color.RED)
+        )
+
+        var polygon = map.addPolygon(
+            PolygonOptions()
+                .add(mumMarker.position)
+                .add(bitMarker.position)
+                .add(LatLng(21.1458, 79.0882))
+                .add(LatLng(22.7196, 75.8577))
+                .add(LatLng(26.9124, 75.7873))
+                .fillColor(Color.argb(90, 0, 0, 255))
+                .strokeColor(Color.BLUE)
+        )
+
+
+    }
+
+
+    private inner class MyInfoWindowAdapter : GoogleMap.InfoWindowAdapter {
+        override fun getInfoWindow(marker: Marker): View? {
+            return null
+        }
+
+        override fun getInfoContents(marker: Marker): View? {
+            var view = layoutInflater.inflate(R.layout.info_window, null)
+            view.findViewById<ImageView>(R.id.imgInfoWindow).setImageResource(
+                R.mipmap.ic_launcher
+            )
+            view.findViewById<TextView>(R.id.txtInfoWindow).setText(
+                marker.title
+            )
+            return view
+        }
+    }
+
+
+    private inner class MyOnInfoWindowClickListener : GoogleMap.OnInfoWindowClickListener {
+        override fun onInfoWindowClick(marker: Marker) {
+            mt("Info Window Clicked: ${marker.title}")
+        }
+    }
+
+
+    private inner class MyOnMarkerDragListener : GoogleMap.OnMarkerDragListener {
+        override fun onMarkerDragStart(marker: Marker) {
+            mt("Drag Start: ${marker.title} ${marker.position.latitude} ${marker.position.longitude}")
+        }
+
+        override fun onMarkerDrag(marker: Marker) {
+            mt("Drag: ${marker.title} ${marker.position.latitude} ${marker.position.longitude}")
+        }
+
+        override fun onMarkerDragEnd(marker: Marker) {
+            mt("Drag End: ${marker.title} ${marker.position.latitude} ${marker.position.longitude}")
+        }
+    }
+
+    private inner class MyOnMarkerClickListener : GoogleMap.OnMarkerClickListener {
+        override fun onMarkerClick(marker: Marker): Boolean {
+            mt("Marker Clicked : ${marker.title}");
+            return false;
+        }
+    }
+
+    private inner class MyOnMapClickListener : GoogleMap.OnMapClickListener {
+        override fun onMapClick(position: LatLng) {
+
+            markers.add(
+                map.addMarker(
+                    MarkerOptions()
+                        .title("Some Marker!")
+                        .position(position)
+                        .icon(
+                            BitmapDescriptorFactory.defaultMarker(
+                                BitmapDescriptorFactory.HUE_YELLOW
+                            )
+                        )
+                )
+            )
+            //move camera
+            /*map.moveCamera(
+                CameraUpdateFactory.newLatLng(bitMarker.position)
+            )*/
+            //map.animateCamera(CameraUpdateFactory.newLatLng(bitMarker.position))
+            //map.animateCamera(CameraUpdateFactory.newLatLngZoom(bitMarker.position, 18F))
+
+            var cameraPosition = CameraPosition.builder()
+                .target(bitMarker.position)
+                .tilt(80F)
+                .bearing(90f)
+                .zoom(18F)
+                .build()
+
+            var cameraUpdate = CameraUpdateFactory.newCameraPosition(cameraPosition)
+            map.animateCamera(
+                cameraUpdate,
+                5000,
+                null
+            )
+        }
+    }
+
 
     @RequiresApi(Build.VERSION_CODES.KITKAT)
     private fun addMarkers() {
@@ -67,22 +196,22 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         //bitMarker.remove()
 
 
-       /* var flag = BitmapFactory.decodeResource(resources, R.drawable.flag)
-        flag.width = flag.width / 5
-        flag.height = flag.height / 5*/
+        /* var flag = BitmapFactory.decodeResource(resources, R.drawable.flag)
+         flag.width = flag.width / 5
+         flag.height = flag.height / 5*/
 
         mumMarker = map.addMarker(
             MarkerOptions()
                 .title("Mumbai")
                 .snippet("This is Mumbai!")
                 .position(LatLng(19.0760, 72.8777))
-                .icon(
+               /* .icon(
                     //BitmapDescriptorFactory.fromBitmap(flag)
                     BitmapDescriptorFactory.fromResource(
                         R.mipmap.ic_launcher
                     )
 
-                )
+                )*/
         )
 
     }
@@ -115,5 +244,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 .snippet("Nice Mall in Pune...")
         )
 
+    }
+
+    private fun mt(text : String) {
+        Log.e("tag", text)
     }
 }
