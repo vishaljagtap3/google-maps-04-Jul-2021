@@ -7,6 +7,8 @@ import `in`.bitcode.googlemaps.databinding.ActivityMapsBinding
 import android.annotation.SuppressLint
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.Point
+import android.location.Geocoder
 import android.os.Build
 import android.util.Log
 import android.view.View
@@ -16,6 +18,8 @@ import androidx.annotation.RequiresApi
 import com.google.android.gms.maps.*
 import com.google.android.gms.maps.GoogleMap.CancelableCallback
 import com.google.android.gms.maps.model.*
+import java.util.*
+import kotlin.collections.ArrayList
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -53,6 +57,32 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         map.setOnCircleClickListener(MyOnCircleClickListener())
         addShapes()
+
+        misc()
+    }
+
+    private fun misc() {
+
+        mt("Location --> 11.178402,24.049911")
+        var screenLocation : Point = map.projection.toScreenLocation( LatLng(11.178402,24.049911))
+        mt("Point is ${screenLocation.x} ${screenLocation.y}")
+
+        var latLng = map.projection.fromScreenLocation(screenLocation)
+        mt("Projection returned lat lng ${latLng.latitude} ${latLng.longitude}")
+
+        var gc = Geocoder(this, Locale.getDefault())
+        //var addresses = gc.getFromLocation(bitMarker.position.latitude, bitMarker.position.longitude, 50)
+        var addresses = gc.getFromLocationName("Bitcode", 10)
+        for(address  in addresses) {
+            mt("${address.getAddressLine(0)}")
+            mt("${address.getAddressLine(1)}")
+            mt("Postal code: ${address.postalCode}")
+            mt("${address.countryName}")
+            mt("Phone: ${address.phone}")
+            mt("-------------------------------------------------")
+        }
+
+
     }
 
 
@@ -225,6 +255,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         map.isTrafficEnabled = true
 
         map.mapType = GoogleMap.MAP_TYPE_SATELLITE
+
 
         map.uiSettings.isCompassEnabled = true
         map.uiSettings.isZoomControlsEnabled = true
